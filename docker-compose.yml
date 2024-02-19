@@ -19,26 +19,8 @@ services:
       - '--storage.tsdb.path=/prometheus'
       - '--config.file=/etc/prometheus/prometheus.yml'
     volumes:
-      - ./prometheus/data:/prometheus
-      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
-
-  grafana:
-    image: grafana/grafana:latest
-    container_name: monitoring-grafana
-    hostname: rpi-grafana
-    restart: unless-stopped
-    networks:
-      - monitoring
-    ports:
-      - "3000:3000"
-    user: "472"
-    depends_on:
-      - prometheus
-    env_file:
-      - ./grafana.env
-    volumes:
-      - ./grafana/data:/var/lib/grafana
-      - ./grafana/provisioning:/etc/grafana/provisioning
+      - './prometheus/data:/prometheus'
+      - './prometheus/prometheus.yml:/etc/prometheus/prometheus.yml'
 
   node-exporter:
     image: prom/node-exporter:latest
@@ -50,11 +32,29 @@ services:
     expose:
       - 9100
     command:
-      - '--path.rootfs=/rootfs'
-      - '--collector.filesystem.ignored-mount-points'
-      - '^/(sys|proc|dev|host|etc|rootfs/var/lib/docker/containers|rootfs/var/lib/docker/overlay2|rootfs/run/docker/netns|rootfs/var/lib/docker/aufs)($$|/)'
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
     volumes:
-      - /:/rootfs:ro,rslave
+      - '/proc:/host/proc:ro,rslave'
+      - '/sys:/host/sys:ro,rslave'
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: monitoring-grafana
+    hostname: rpi-grafana
+    restart: unless-stopped
+    networks:
+      - monitoring
+    ports:
+      - '3000:3000'
+    user: '472'
+    depends_on:
+      - prometheus
+    env_file:
+      - ./grafana.env
+    volumes:
+      - './grafana/data:/var/lib/grafana'
+      - './grafana/provisioning:/etc/grafana/provisioning'
 
 networks:
   monitoring:
