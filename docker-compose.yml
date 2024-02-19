@@ -1,0 +1,61 @@
+version: '3'
+
+services:
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: monitoring-prometheus
+    hostname: rpi-prometheus
+    restart: unless-stopped
+    user: "nobody"
+    depends_on:
+      - node-exporter
+    networks:
+      - monitoring
+    expose:
+      - 9090
+    links:
+      - node-exporter:node-exporter
+    command:
+      - '--storage.tsdb.path=/prometheus'
+      - '--config.file=/etc/prometheus/prometheus.yml'
+    volumes:
+      - ./prometheus/data:/prometheus
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: monitoring-grafana
+    hostname: rpi-grafana
+    restart: unless-stopped
+    networks:
+      - monitoring
+    ports:
+      - "3000:3000"
+    user: "472"
+    depends_on:
+      - prometheus
+    env_file:
+      - ./grafana.env
+    volumes:
+      - ./grafana/data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: monitoring-node-exporter
+    hostname: rpi-exporter
+    restart: unless-stopped
+    networks:
+      - monitoring
+    expose:
+      - 9100
+    command:
+      - '--path.rootfs=/rootfs'
+      - '--collector.filesystem.ignored-mount-points'
+      - '^/(sys|proc|dev|host|etc|rootfs/var/lib/docker/containers|rootfs/var/lib/docker/overlay2|rootfs/run/docker/netns|rootfs/var/lib/docker/aufs)($$|/)'
+    volumes:
+      - /:/rootfs:ro,rslave
+
+networks:
+  monitoring:
+    driver: bridge
